@@ -1,0 +1,64 @@
+version: "1.0"
+workflows:
+  terraform_plan:
+    description: "Validate and plan Terraform changes"
+    repository: "OWNER/REPO"
+    workflow: "terraform-plan.yml"
+    risk: low
+    environments: [dev, test, prod]
+    inputs: {application: string, environment: string}
+    outputs: [plan_status, plan_artifact]
+    on_failure: stop
+
+  backup_server:
+    description: "Create a recoverable server backup/AMI"
+    repository: "OWNER/REPO"
+    workflow: "backup-server.yml"
+    risk: high
+    environments: [dev, test, prod]
+    inputs: {application: string, environment: string}
+    outputs: [backup_ami]
+    on_failure: stop
+
+  provision_server:
+    description: "Provision the application server"
+    repository: "OWNER/REPO"
+    workflow: "provision-server.yml"
+    risk: high
+    environments: [dev, test, prod]
+    requires: [terraform_plan, backup_server]
+    inputs: {application: string, environment: string}
+    outputs: [instance_id, private_ip, ami_id]
+    on_failure: stop
+
+  configure_tomcat:
+    description: "Configure Tomcat on the application server"
+    repository: "OWNER/REPO"
+    workflow: "configure-tomcat.yml"
+    risk: medium
+    environments: [dev, test, prod]
+    requires: [provision_server]
+    inputs: {instance_id: string}
+    outputs: [configuration_status]
+    on_failure: retry
+
+  validate_application:
+    description: "Run application health and smoke tests"
+    repository: "OWNER/REPO"
+    workflow: "validate-application.yml"
+    risk: medium
+    environments: [dev, test, prod]
+    requires: [configure_tomcat]
+    inputs: {instance_id: string}
+    outputs: [validation_status, validation_report]
+    on_failure: rollback
+
+  rollback_server:
+    description: "Restore the server from the approved backup AMI"
+    repository: "OWNER/REPO"
+    workflow: "rollback-server.yml"
+    risk: critical
+    environments: [test, prod]
+    inputs: {instance_id: string, backup_ami: string}
+    outputs: [rollback_status]
+    on_failure: escalate

@@ -19,4 +19,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python -m compileall orchestrator
-      - run: python -c "from orchestrator.planner import build_plan; from orchestrator.models import PlanRequest; p=build_plan(PlanRequest(request='Upgrade ART production server to RHEL 9', application='ART', environment='prod')); assert p.approval_required; assert len(p.steps) == 5"
+      - name: Test fallback Terraform planning
+        run: python -c "from orchestrator.planner import build_plan; from orchestrator.models import PlanRequest; p=build_plan(PlanRequest(request='Apply the sandbox Terraform configuration', application='sandbox', environment='dev')); assert p.steps[0].workflow == 'terraform_plan'; assert p.steps[0].inputs == {'environment': 'dev', 'action': 'apply'}; assert p.steps[0].risk == 'high'"
+      - name: Test production approval policy
+        run: python -c "from orchestrator.planner import build_plan; from orchestrator.models import PlanRequest; p=build_plan(PlanRequest(request='Apply the production Terraform configuration', application='sandbox', environment='prod')); assert p.approval_required; assert p.steps[0].inputs['environment'] == 'prd'"

@@ -1,0 +1,11 @@
+version: "1.0"
+production:
+  require_approval_risk: [high, critical]
+  prohibited_workflows: []
+  maximum_retries: 2
+  allowed_branch: main
+  rollback_on: [validation_failure, upgrade_failure]
+non_production:
+  require_approval_risk: [critical]
+  maximum_retries: 2
+  allowed_branch: main

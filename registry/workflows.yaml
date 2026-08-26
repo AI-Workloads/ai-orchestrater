@@ -2,11 +2,11 @@ version: "1.0"
 workflows:
   terraform_plan:
     description: "Validate and plan Terraform changes"
-    repository: "OWNER/REPO"
-    workflow: "terraform-plan.yml"
+    repository: "AI-Workloads/ai-sandbox-account"
+    workflow: "terraform.yml"
     risk: low
     environments: [dev, test, prod]
-    inputs: {application: string, environment: string}
+    inputs: {environment: string, action: string}
     outputs: [plan_status, plan_artifact]
     on_failure: stop
 
